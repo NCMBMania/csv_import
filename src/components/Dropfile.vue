@@ -52,11 +52,13 @@ export default Vue.extend({
         const res = await fileRead(f)
         // @ts-ignore
         params[f.name.replace(/\.csv$/, '')] = this.parse(Papa.parse(res.target.result, {header: true}).data);
+        // @ts-ignore
         console.log(params[f.name.replace(/\.csv$/, '')])
       }
       this.$emit('success', params)
       this.isEnter = false
     },
+    // @ts-ignore
     parse(ary) {
       const results = [];
       for (const params of ary) {
@@ -65,17 +67,21 @@ export default Vue.extend({
           const config = column.split(':');
           const value = params[column];
           if (config.length === 1) {
+            // @ts-ignore
             values[column] = value;
           }
           switch (config[1]) {
             case 'String':
+              // @ts-ignore
               values[config[0]] = value;
               break;
             case 'Boolean':
               if (value.toUpperCase() === 'TRUE') {
+                // @ts-ignore
                 values[config[0]] = true;
               }
               if (value.toUpperCase() === 'FALSE') {
+                // @ts-ignore
                 values[config[0]] = false;
               }
               break;
@@ -83,6 +89,7 @@ export default Vue.extend({
               if (value && value !== '') {
                 const d = new Date(value)
                 if (d.toString() !== 'Invalid Date') {
+                  // @ts-ignore
                   values[config[0]] = {
                     __type: 'Date',
                     iso: d.toISOString()
@@ -92,12 +99,14 @@ export default Vue.extend({
               break;
             case 'Number':
               if (value && value !== '' && !Number.isNaN(parseFloat(value))) {
+                // @ts-ignore
                 values[config[0]] = parseFloat(value);
               }
               break;
             case 'Array':
             case 'Object':
               try {
+                // @ts-ignore
                 values[config[0]] = JSON.parse(value);
               } catch (e) {
 
