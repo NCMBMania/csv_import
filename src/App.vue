@@ -31,7 +31,7 @@
                     label="クライアントキー"
                     required
                   ></v-text-field>
-                  <h3>データストアへのアップロードファイル(コレクションをエクスポート、Zipファイルを伸張した中身のファイルをD&amp;Dしてください）
+                  <h3>データストアへのアップロードファイル(CSVファイルをドロップしてください）
                   </h3>
                   <Dropfile @success="success">
                     ファイルアップロード
@@ -45,9 +45,9 @@
                       <div>
                         フィールド名が次のように変わるので注意してください
                         <ul>
-                          <li>データ作成日時 → createDateMonaca</li>
-                          <li>データ最終更新日時 → updateDateMonaca</li>
-                          <li>Monacaバックエンド上のID → monaca_id</li>
+                          <li>createDate → oldCreateDate</li>
+                          <li>updateDate → oldUpdateDate</li>
+                          <li>objectId → oldObjectId</li>
                         </ul>
                       </div>
                     </v-alert>
@@ -66,22 +66,11 @@
                   </Dropfile>
                   <div v-if="installations.length > 0">
                     <h4>取り込み予定のファイル</h4>
-                    <v-alert
-                      outlined
-                      color="red"
-                    >
-                      <div>
-                        ニフクラ mobile backendの仕様上、開発用または本番用のどちらかのデバイストークンしか取り込めません。両方とも利用する場合はニフクラ mobile backendのアプリを新しく作成し、そちらに取り込んでください。
-                      </div>
-                    </v-alert>
                     <v-list>
                       <v-list-item tree-line>
                         <v-list-item-content>
                           <v-list-item-title>プッシュ通知 <v-icon @click="deleteInstallation">mdi-delete</v-icon></v-list-item-title>
                           <v-list-item-subtitle>取り込み予定行数 {{ installations.length }}</v-list-item-subtitle>
-                          <v-list-item-subtitle>
-                            <v-switch v-model="pushType" class="ma-2" :label="pushMessage"></v-switch>
-                          </v-list-item-subtitle>
                         </v-list-item-content>
                       </v-list-item>
                     </v-list>
@@ -136,7 +125,6 @@ export default Vue.extend({
     clientKeyErrors: '',
     files: {},
     installations: [],
-    pushType: Boolean,
     message: {type: String},
     ncmb: {type: NCMB}
   }),
@@ -179,8 +167,6 @@ export default Vue.extend({
           // @ts-ignore
           this.log(`デバイストークンをInstallationsに登録します`)
           // @ts-ignore
-          this.log(`処理対象のデータは${this.pushType ? '本番用' : '開発用'}のデバイストークンです`);
-          // @ts-ignore
           await this.importInstallation()
         }
       } catch (err) {
@@ -194,11 +180,8 @@ export default Vue.extend({
       // @ts-ignore
       for (const row of this.installations) {
         // @ts-ignore
-        if (this.pushType && row.pushType === 'debug') continue;
-        // @ts-ignore
-        if (!this.pushType && row.pushType === 'release') continue;
-        for (const field of ['createDate', 'updateDate']) {
-          row[`${field}_Monaca`] = row[field]
+        for (const field of ['objectId', 'createDate', 'updateDate']) {
+          row[`old${field[0].toUpperCase()}${field.slice(1)}`] = row[field]
           delete row[field]
         }
         const install = new NCMBInstallation;
@@ -212,8 +195,8 @@ export default Vue.extend({
       // @ts-ignore
       for (const row of rows) {
         const obj = new NCMBObject(className)
-        for (const field of ['createDate', 'updateDate']) {
-          row[`${field}_Monaca`] = row[field]
+        for (const field of ['objectId', 'createDate', 'updateDate']) {
+          row[`old${field[0].toUpperCase()}${field.slice(1)}`] = row[field]
           delete row[field]
         }
         await obj.sets(row).save()
@@ -224,12 +207,6 @@ export default Vue.extend({
     log(message: string) {
       // @ts-ignore
       this.message = `${message}<br />${this.message === null ? '': this.message }`;
-    }
-  },
-  computed: {
-    pushMessage() {
-      // @ts-ignore
-      return this.pushType === false ? '開発用デバイストークンを取り込む' : '本番運用のデバイストークンを取り込む'
     }
   }
 });

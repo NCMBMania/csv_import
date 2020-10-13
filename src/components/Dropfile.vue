@@ -14,6 +14,9 @@
 <script lang="ts">
 import Vue from 'vue';
 // @ts-ignore
+import Papa from 'papaparse';
+
+// @ts-ignore
 const fileRead = (file) => {
   return new Promise((res, rej) => {
     try {
@@ -48,10 +51,63 @@ export default Vue.extend({
       for (const f of files) {
         const res = await fileRead(f)
         // @ts-ignore
-        params[f.name.replace(/\.json$/, '').replace('collection_', '')] = JSON.parse(res.target.result).results
+        params[f.name.replace(/\.csv$/, '')] = this.parse(Papa.parse(res.target.result, {header: true}).data);
+        console.log(params[f.name.replace(/\.csv$/, '')])
       }
       this.$emit('success', params)
       this.isEnter = false
+    },
+    parse(ary) {
+      const results = [];
+      for (const params of ary) {
+        const values = {};
+        for (const column in params) {
+          const config = column.split(':');
+          const value = params[column];
+          if (config.length === 1) {
+            values[column] = value;
+          }
+          switch (config[1]) {
+            case 'String':
+              values[config[0]] = value;
+              break;
+            case 'Boolean':
+              if (value.toUpperCase() === 'TRUE') {
+                values[config[0]] = true;
+              }
+              if (value.toUpperCase() === 'FALSE') {
+                values[config[0]] = false;
+              }
+              break;
+            case 'Date':
+              if (value && value !== '') {
+                const d = new Date(value)
+                if (d.toString() !== 'Invalid Date') {
+                  values[config[0]] = {
+                    __type: 'Date',
+                    iso: d.toISOString()
+                  }
+                }
+              }
+              break;
+            case 'Number':
+              if (value && value !== '' && !Number.isNaN(parseFloat(value))) {
+                values[config[0]] = parseFloat(value);
+              }
+              break;
+            case 'Array':
+            case 'Object':
+              try {
+                values[config[0]] = JSON.parse(value);
+              } catch (e) {
+
+              }
+              break;
+          }
+        }
+        results.push(values);
+      }
+      return results;
     }
   }
 });
